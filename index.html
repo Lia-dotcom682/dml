@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TKA — Penggunaan DML dalam MySQL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --navy-950:#081426;
+    --navy-900:#0B2545;
+    --navy-800:#13315C;
+    --navy-700:#1D4380;
+    --blue-100:#EAF1FB;
+    --paper:#F5F7FA;
+    --gold:#D9A441;
+    --gold-dark:#B8862E;
+    --ink:#101826;
+    --muted:#5B6B85;
+    --line:#D8E0EC;
+    --ok:#1E7A4C;
+    --ok-bg:#E7F5EC;
+    --bad:#B23A2E;
+    --bad-bg:#FBEAE8;
+    --white:#FFFFFF;
+    --radius:14px;
+    --shadow: 0 12px 32px -12px rgba(8,20,38,.28);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 90% -10%, rgba(217,164,65,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(29,67,128,.12), transparent 60%),
+      var(--paper);
+    font-family:'Inter',sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .topbar{
+    width:100%;
+    background:linear-gradient(120deg,var(--navy-950),var(--navy-900) 55%,var(--navy-700));
+    color:var(--white);
+    padding:18px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:16px;
+    box-shadow:var(--shadow);
+    position:relative;
+    overflow:hidden;
+  }
+  .topbar::after{
+    content:"";
+    position:absolute; inset:0;
+    background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 2px, transparent 2px 26px);
+    pointer-events:none;
+  }
+  .topbar-inner{
+    width:100%;
+    max-width:920px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    z-index:1;
+  }
+  .badge-mark{
+    width:46px;height:46px;border-radius:10px;
+    background:linear-gradient(160deg,var(--gold),var(--gold-dark));
+    display:flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--navy-950);
+    font-size:15px;flex-shrink:0;
+    box-shadow:0 4px 10px rgba(0,0,0,.25);
+  }
+  .topbar h1{
+    font-family:'Poppins',sans-serif;
+    font-size:18px;
+    font-weight:700;
+    margin:0;
+    letter-spacing:.2px;
+  }
+  .topbar p{
+    margin:2px 0 0;
+    font-size:12.5px;
+    color:#C9D6EC;
+    font-weight:500;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:1.5px;
+    color:var(--gold);
+    text-transform:uppercase;
+  }
+
+  main{
+    width:100%;
+    max-width:920px;
+    padding:32px 20px 60px;
+    flex:1;
+  }
+  .card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:32px;
+  }
+  .screen{display:none;}
+  .screen.active{display:block; animation:rise .35s ease;}
+  @keyframes rise{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);}}
+
+  /* ---- Biodata screen ---- */
+  .ticket{
+    display:flex;
+    gap:0;
+    border-radius:var(--radius);
+    overflow:hidden;
+    border:1px solid var(--line);
+    margin-bottom:26px;
+  }
+  .ticket-side{
+    width:14px;
+    background:repeating-linear-gradient(180deg, var(--gold) 0 10px, var(--navy-900) 10px 20px);
+  }
+  .ticket-body{
+    flex:1;
+    background:var(--blue-100);
+    padding:20px 24px;
+  }
+  .ticket-body .eyebrow{color:var(--navy-700);}
+  .ticket-body h2{
+    font-family:'Poppins',sans-serif;
+    margin:4px 0 6px;
+    color:var(--navy-900);
+    font-size:21px;
+  }
+  .ticket-body p{margin:0; color:var(--muted); font-size:14px; line-height:1.55;}
+
+  .field{margin-bottom:18px;}
+  .field label{
+    display:block;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--navy-800);
+    margin-bottom:6px;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+  }
+  .field input{
+    width:100%;
+    padding:12px 14px;
+    border-radius:9px;
+    border:1.5px solid var(--line);
+    font-size:15px;
+    font-family:'Inter',sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .field input:focus{
+    outline:none;
+    border-color:var(--navy-700);
+    box-shadow:0 0 0 3px rgba(29,67,128,.15);
+    background:var(--white);
+  }
+  .field small{color:var(--bad); font-size:12px; display:none; margin-top:5px;}
+  .field.error input{border-color:var(--bad);}
+  .field.error small{display:block;}
+
+  .rules{
+    background:var(--paper);
+    border:1px dashed var(--line);
+    border-radius:10px;
+    padding:14px 16px;
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:22px;
+    line-height:1.6;
+  }
+  .rules b{color:var(--navy-800);}
+
+  button{
+    font-family:'Inter',sans-serif;
+    cursor:pointer;
+    border:none;
+  }
+  .btn-primary{
+    background:linear-gradient(135deg,var(--navy-800),var(--navy-950));
+    color:var(--white);
+    padding:13px 26px;
+    border-radius:9px;
+    font-weight:700;
+    font-size:14.5px;
+    letter-spacing:.2px;
+    box-shadow:0 8px 18px -6px rgba(11,37,69,.5);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .btn-primary:hover{transform:translateY(-1px); box-shadow:0 10px 22px -6px rgba(11,37,69,.55);}
+  .btn-primary:disabled{opacity:.45; cursor:not-allowed; transform:none;}
+  .btn-secondary{
+    background:var(--white);
+    color:var(--navy-800);
+    border:1.5px solid var(--navy-800);
+    padding:11px 22px;
+    border-radius:9px;
+    font-weight:600;
+    font-size:14px;
+  }
+  .btn-secondary:hover{background:var(--blue-100);}
+  .btn-gold{
+    background:linear-gradient(135deg,var(--gold),var(--gold-dark));
+    color:var(--navy-950);
+    padding:13px 26px;
+    border-radius:9px;
+    font-weight:700;
+    font-size:14.5px;
+    box-shadow:0 8px 18px -6px rgba(184,134,46,.45);
+  }
+  .btn-gold:hover{transform:translateY(-1px);}
+  .btn-row{display:flex; justify-content:flex-end; gap:12px; margin-top:6px;}
+
+  /* ---- Quiz screen ---- */
+  .quiz-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .quiz-id{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    color:var(--navy-700);
+    background:var(--blue-100);
+    padding:6px 12px;
+    border-radius:20px;
+    font-weight:600;
+  }
+  .progress-wrap{
+    flex:1;
+    min-width:180px;
+    margin:0 18px;
+  }
+  .progress-bar{
+    height:8px;
+    background:var(--line);
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    background:linear-gradient(90deg,var(--navy-700),var(--gold));
+    border-radius:6px;
+    transition:width .3s ease;
+    width:10%;
+  }
+  .progress-text{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:5px;
+    text-align:right;
+  }
+
+  .qnav{
+    display:flex;
+    flex-wrap:wrap;
+    gap:7px;
+    margin-bottom:24px;
+  }
+  .qnav button{
+    width:34px;height:34px;
+    border-radius:8px;
+    border:1.5px solid var(--line);
+    background:var(--white);
+    color:var(--muted);
+    font-weight:600;
+    font-size:13px;
+  }
+  .qnav button.current{border-color:var(--navy-800); color:var(--navy-800); background:var(--blue-100);}
+  .qnav button.answered{background:var(--navy-900); color:var(--white); border-color:var(--navy-900);}
+  .qnav button.answered.current{outline:2px solid var(--gold); outline-offset:1px;}
+
+  .question-box{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:24px;
+    margin-bottom:20px;
+  }
+  .qnum{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--gold-dark);
+    font-size:12.5px;
+    font-weight:700;
+    letter-spacing:.5px;
+    margin-bottom:8px;
+    display:block;
+  }
+  .qtext{
+    font-family:'Poppins',sans-serif;
+    font-size:17px;
+    font-weight:600;
+    color:var(--navy-950);
+    line-height:1.5;
+    margin:0 0 14px;
+  }
+  .qcode{
+    display:block;
+    background:var(--navy-950);
+    color:#DCEBFF;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px;
+    padding:12px 14px;
+    border-radius:8px;
+    margin:0 0 18px;
+    white-space:pre-wrap;
+    word-break:break-word;
+    line-height:1.6;
+  }
+  .options{display:flex; flex-direction:column; gap:10px;}
+  .option{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    padding:12px 14px;
+    border-radius:9px;
+    border:1.5px solid var(--line);
+    background:var(--white);
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+  }
+  .option:hover{border-color:var(--navy-700);}
+  .option.selected{border-color:var(--navy-800); background:var(--blue-100);}
+  .option .letter{
+    width:26px;height:26px;flex-shrink:0;
+    border-radius:6px;
+    background:var(--line);
+    color:var(--navy-900);
+    font-weight:700;
+    font-size:12.5px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .option.selected .letter{background:var(--navy-800); color:var(--white);}
+  .option span.txt{font-size:14px; line-height:1.5; padding-top:2px; font-family:'JetBrains Mono',monospace;}
+
+  .quiz-actions{display:flex; justify-content:space-between; align-items:center;}
+
+  /* ---- Result screen ---- */
+  .score-panel{
+    display:flex;
+    gap:24px;
+    align-items:center;
+    background:linear-gradient(120deg,var(--navy-950),var(--navy-800));
+    border-radius:14px;
+    padding:26px 28px;
+    color:var(--white);
+    margin-bottom:26px;
+    flex-wrap:wrap;
+  }
+  .score-circle{
+    width:104px;height:104px;
+    border-radius:50%;
+    background:rgba(255,255,255,.08);
+    border:3px solid var(--gold);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  .score-circle .num{
+    font-family:'Poppins',sans-serif;
+    font-size:28px;
+    font-weight:800;
+  }
+  .score-circle .lbl{font-size:10px; letter-spacing:1px; color:#C9D6EC; text-transform:uppercase;}
+  .score-info{flex:1; min-width:200px;}
+  .score-info .name{font-family:'Poppins',sans-serif; font-size:19px; font-weight:700; margin:0 0 3px;}
+  .score-info .nisn{font-family:'JetBrains Mono',monospace; font-size:12.5px; color:#C9D6EC; margin:0 0 12px;}
+  .status-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 14px;
+    border-radius:20px;
+    font-size:12.5px;
+    font-weight:700;
+    letter-spacing:.3px;
+  }
+  .status-pill.pass{background:rgba(30,122,76,.25); color:#8FE3B7; border:1px solid rgba(143,227,183,.4);}
+  .status-pill.fail{background:rgba(178,58,46,.22); color:#F3A69C; border:1px solid rgba(243,166,156,.4);}
+  .kkm-note{font-size:11.5px; color:#9FB2CE; margin-top:8px;}
+
+  .detail-title{
+    font-family:'Poppins',sans-serif;
+    font-size:15px;
+    font-weight:700;
+    color:var(--navy-900);
+    margin:0 0 14px;
+  }
+  .detail-item{
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:16px 18px;
+    margin-bottom:12px;
+  }
+  .detail-item.correct{border-left:4px solid var(--ok);}
+  .detail-item.wrong{border-left:4px solid var(--bad);}
+  .detail-top{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:8px;}
+  .detail-q{font-size:14px; font-weight:600; color:var(--ink); line-height:1.5; margin:0;}
+  .detail-code{
+    display:block;
+    background:var(--navy-950);
+    color:#DCEBFF;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    padding:9px 11px;
+    border-radius:7px;
+    margin:6px 0 8px;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+  .mark{
+    flex-shrink:0;
+    font-size:11px;
+    font-weight:700;
+    padding:4px 10px;
+    border-radius:20px;
+    letter-spacing:.3px;
+  }
+  .mark.correct{background:var(--ok-bg); color:var(--ok);}
+  .mark.wrong{background:var(--bad-bg); color:var(--bad);}
+  .detail-ans{font-size:13px; color:var(--muted); margin:3px 0; font-family:'JetBrains Mono',monospace;}
+  .detail-ans b{color:var(--ink);}
+  .detail-ans.wrongtext{color:var(--bad);}
+  .detail-ans.righttext{color:var(--ok);}
+
+  .result-actions{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:26px;
+    padding-top:22px;
+    border-top:1px solid var(--line);
+  }
+
+  footer{
+    color:var(--muted);
+    font-size:12px;
+    padding:18px;
+    text-align:center;
+  }
+
+  @media(max-width:560px){
+    .card{padding:22px 18px;}
+    .score-panel{padding:20px;}
+    .quiz-header{flex-direction:column; align-items:stretch;}
+    .progress-wrap{margin:8px 0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="badge-mark">TKA</div>
+    <div>
+      <span class="eyebrow">Tes Kemampuan Akademik · Basis Data</span>
+      <h1>Penggunaan DML dalam MySQL</h1>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div class="card">
+
+    <!-- SCREEN 1: BIODATA -->
+    <section id="screen-biodata" class="screen active">
+      <div class="ticket">
+        <div class="ticket-side"></div>
+        <div class="ticket-body">
+          <span class="eyebrow">Kartu Peserta</span>
+          <h2>Isi Biodata Sebelum Memulai</h2>
+          <p>Data ini akan tercetak pada laporan hasil asesmen kamu. Pastikan nama dan NISN sudah benar sebelum melanjutkan.</p>
+        </div>
+      </div>
+
+      <div class="field" id="field-nama">
+        <label for="input-nama">Nama Lengkap</label>
+        <input type="text" id="input-nama" placeholder="Contoh: Ahmad Zaki Ramadhan" autocomplete="off">
+        <small>Nama lengkap wajib diisi.</small>
+      </div>
+      <div class="field" id="field-nisn">
+        <label for="input-nisn">NISN</label>
+        <input type="text" id="input-nisn" placeholder="Contoh: 0081234567" inputmode="numeric" autocomplete="off">
+        <small>NISN wajib diisi (angka, 5–10 digit).</small>
+      </div>
+
+      <div class="rules">
+        <b>Ketentuan Ujian:</b> 10 soal pilihan ganda (5 opsi, 1 jawaban benar) tentang indikator <b>Penggunaan DML (Data Manipulation Language) dalam MySQL</b> — meliputi perintah <b>INSERT, UPDATE, DELETE,</b> dan <b>SELECT</b>. Jawaban akan dikoreksi otomatis setelah kamu mengumpulkan. Standar ketuntasan minimal (KKM) adalah <b>80</b>. Jika nilai kamu di bawah KKM, kamu boleh mengerjakan ujian ulang dengan susunan soal yang berbeda.
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-primary" onclick="startExam()">Mulai Ujian →</button>
+      </div>
+    </section>
+
+    <!-- SCREEN 2: QUIZ -->
+    <section id="screen-quiz" class="screen">
+      <div class="quiz-header">
+        <span class="quiz-id" id="quiz-id-tag">TKA-DML-01</span>
+        <div class="progress-wrap">
+          <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+          <div class="progress-text" id="progress-text">Soal 1 dari 10</div>
+        </div>
+      </div>
+
+      <div class="qnav" id="qnav"></div>
+
+      <div class="question-box">
+        <span class="qnum" id="qnum-label">SOAL 01</span>
+        <p class="qtext" id="qtext"></p>
+        <code class="qcode" id="qcode" style="display:none"></code>
+        <div class="options" id="options"></div>
+      </div>
+
+      <div class="quiz-actions">
+        <button class="btn-secondary" id="btn-prev" onclick="goPrev()">← Sebelumnya</button>
+        <button class="btn-primary" id="btn-next" onclick="goNext()">Berikutnya →</button>
+        <button class="btn-gold" id="btn-submit" style="display:none" onclick="submitExam()">Kumpulkan Jawaban</button>
+      </div>
+    </section>
+
+    <!-- SCREEN 3: RESULT -->
+    <section id="screen-result" class="screen">
+      <div class="score-panel">
+        <div class="score-circle">
+          <span class="num" id="result-score">0</span>
+          <span class="lbl">Nilai</span>
+        </div>
+        <div class="score-info">
+          <p class="name" id="result-nama">-</p>
+          <p class="nisn" id="result-nisn">NISN: -</p>
+          <span class="status-pill" id="result-status">TUNTAS</span>
+          <div class="kkm-note" id="result-summary">Benar 0 dari 10 soal · KKM 80</div>
+        </div>
+      </div>
+
+      <p class="detail-title">Rincian Koreksi Jawaban</p>
+      <div id="detail-list"></div>
+
+      <div class="result-actions">
+        <button class="btn-primary" onclick="downloadReport()">⬇ Unduh Laporan (PDF)</button>
+        <button class="btn-secondary" id="btn-retry" style="display:none" onclick="retryExam()">↻ Ujian Ulang (Soal Berbeda)</button>
+        <button class="btn-secondary" onclick="restartAll()">Ujian Peserta Baru</button>
+      </div>
+    </section>
+
+  </div>
+  <footer>Aplikasi Asesmen TKA · Indikator: Penggunaan DML dalam MySQL</footer>
+</main>
+
+<script>
+/* ============ BANK SOAL (20 soal, diambil 10 acak setiap sesi) ============ */
+/* code: opsional, cuplikan query yang ditampilkan sebagai konteks soal */
+const BANK = [
+  {q:"Perintah DML yang digunakan untuk menambahkan baris data baru ke dalam sebuah tabel adalah…",
+   code:"",
+   options:["INSERT","UPDATE","DELETE","SELECT","CREATE"], correct:0},
+  {q:"Perintah yang tepat untuk mengubah nilai kolom pada baris data yang sudah ada di dalam tabel adalah…",
+   code:"",
+   options:["INSERT","UPDATE","DELETE","ALTER","DROP"], correct:1},
+  {q:"Untuk menghapus satu atau beberapa baris data dari sebuah tabel, perintah DML yang digunakan adalah…",
+   code:"",
+   options:["TRUNCATE","DROP","DELETE","REMOVE","UPDATE"], correct:2},
+  {q:"Perintah untuk menampilkan seluruh data dari tabel siswa adalah…",
+   code:"",
+   options:["SHOW siswa;","SELECT * FROM siswa;","GET siswa;","FETCH * siswa;","DISPLAY siswa;"], correct:1},
+  {q:"Perhatikan query berikut. Query tersebut berfungsi untuk…",
+   code:"INSERT INTO siswa (nama, nisn) VALUES ('Rani', '0081234567');",
+   options:["Mengubah data siswa bernama Rani","Menghapus data siswa bernama Rani","Menambahkan data siswa baru bernama Rani","Menampilkan data siswa bernama Rani","Membuat tabel siswa baru"], correct:2},
+  {q:"Perhatikan query berikut. Fungsi dari klausa WHERE pada perintah ini adalah…",
+   code:"UPDATE siswa SET kelas = 'XII RPL 1' WHERE nisn = '0081234567';",
+   options:["Membatasi kolom yang ditampilkan","Menentukan baris data mana yang akan diubah","Mengurutkan hasil query","Menggabungkan dua tabel","Membuat kolom baru"], correct:1},
+  {q:"Jika klausa WHERE tidak disertakan pada perintah DELETE FROM siswa; maka yang akan terjadi adalah…",
+   code:"DELETE FROM siswa;",
+   options:["Hanya baris pertama yang terhapus","Tidak ada baris yang terhapus","Seluruh baris data pada tabel siswa akan terhapus","Tabel siswa akan otomatis terhapus strukturnya","Query akan menampilkan error tanpa aksi apa pun"], correct:2},
+  {q:"Perintah DML yang digunakan untuk mengambil atau menampilkan data dari satu atau lebih tabel adalah…",
+   code:"",
+   options:["INSERT","SELECT","UPDATE","DELETE","ALTER"], correct:1},
+  {q:"Perhatikan query berikut. Klausa yang tepat untuk melengkapi bagian rumpang agar hanya menampilkan siswa dengan nilai di atas 80 adalah…",
+   code:"SELECT * FROM nilai ____ skor > 80;",
+   options:["ORDER BY","GROUP BY","WHERE","HAVING","LIMIT"], correct:2},
+  {q:"Perintah untuk menampilkan data siswa yang diurutkan berdasarkan nama secara ascending (A–Z) adalah…",
+   code:"",
+   options:["SELECT * FROM siswa ORDER BY nama ASC;","SELECT * FROM siswa SORT nama;","SELECT * FROM siswa GROUP BY nama;","SELECT * FROM siswa WHERE nama ASC;","SELECT * FROM siswa LIMIT nama;"], correct:0},
+  {q:"Perhatikan query berikut. Perintah tersebut digunakan untuk…",
+   code:"UPDATE nilai SET skor = skor + 5;",
+   options:["Menambahkan baris data baru dengan skor 5","Menghapus data dengan skor kurang dari 5","Menambahkan 5 poin ke seluruh nilai skor yang ada","Menampilkan data dengan skor lebih dari 5","Membuat kolom skor baru"], correct:2},
+  {q:"Untuk menampilkan hanya kolom nama dan nisn (tanpa kolom lain) dari tabel siswa, perintah yang tepat adalah…",
+   code:"",
+   options:["SELECT * FROM siswa;","SELECT nama, nisn FROM siswa;","SELECT ALL FROM siswa;","SHOW nama, nisn FROM siswa;","SELECT nama AND nisn FROM siswa;"], correct:1},
+  {q:"Perhatikan query berikut. Query ini akan menghapus data siswa dengan ketentuan…",
+   code:"DELETE FROM siswa WHERE kelas = 'XII RPL 3';",
+   options:["Seluruh data pada tabel siswa","Hanya siswa yang kelasnya XII RPL 3","Hanya baris pertama pada tabel siswa","Seluruh tabel siswa beserta strukturnya","Tidak ada data yang terhapus"], correct:1},
+  {q:"Perintah untuk menambahkan beberapa baris data sekaligus dalam satu kali eksekusi INSERT adalah…",
+   code:"INSERT INTO siswa (nama, nisn) VALUES ('Budi','001'), ('Sari','002');",
+   options:["Tidak dapat dilakukan dalam satu perintah","Menambahkan dua baris data sekaligus (Budi dan Sari)","Menimbulkan error karena hanya boleh satu baris","Menambahkan kolom baru bernama Budi dan Sari","Mengubah data Budi menjadi Sari"], correct:1},
+  {q:"Perhatikan query berikut. Fungsi LIMIT 5 pada query tersebut adalah…",
+   code:"SELECT * FROM siswa ORDER BY nilai DESC LIMIT 5;",
+   options:["Menampilkan 5 kolom pertama","Menampilkan 5 baris data teratas setelah diurutkan","Menghapus 5 baris data","Membatasi nilai maksimal menjadi 5","Menjumlahkan 5 data nilai tertinggi"], correct:1},
+  {q:"Perintah DML yang bersifat mengubah struktur tabel (menambah/menghapus kolom) TIDAK termasuk dalam DML karena termasuk kategori DDL, contohnya adalah…",
+   code:"",
+   options:["INSERT","UPDATE","DELETE","ALTER TABLE","SELECT"], correct:3},
+  {q:"Perhatikan query berikut. Query tersebut akan mengubah data pada tabel siswa dengan ketentuan…",
+   code:"UPDATE siswa SET status = 'Lulus' WHERE nilai >= 80;",
+   options:["Mengubah status seluruh siswa menjadi Lulus","Mengubah status menjadi Lulus hanya untuk siswa dengan nilai 80 ke atas","Menghapus siswa dengan nilai di bawah 80","Menambahkan siswa baru dengan status Lulus","Menampilkan siswa dengan status Lulus saja"], correct:1},
+  {q:"Untuk menampilkan jumlah total baris data pada tabel siswa, fungsi agregasi yang digunakan bersama SELECT adalah…",
+   code:"SELECT COUNT(*) FROM siswa;",
+   options:["SUM()","AVG()","COUNT()","MAX()","MIN()"], correct:2},
+  {q:"Perhatikan query berikut. Yang akan terjadi jika query ini dijalankan adalah…",
+   code:"DELETE FROM nilai WHERE skor < 60;",
+   options:["Menghapus seluruh data pada tabel nilai","Menghapus baris data dengan skor kurang dari 60","Mengubah skor yang kurang dari 60 menjadi 60","Menampilkan data dengan skor kurang dari 60","Menambahkan data baru dengan skor 60"], correct:1},
+  {q:"Perintah yang tepat untuk menampilkan data siswa dengan nama yang diawali huruf 'A' adalah…",
+   code:"SELECT * FROM siswa WHERE nama LIKE 'A%';",
+   options:["Menampilkan siswa bernama tepat 'A'","Menampilkan siswa yang namanya diawali huruf A","Menampilkan siswa yang namanya diakhiri huruf A","Menampilkan siswa yang namanya mengandung huruf A di mana saja","Menghapus siswa bernama A"], correct:1}
+];
+
+const KKM = 80;
+const TOTAL_SOAL = 10;
+
+let student = {nama:"", nisn:""};
+let currentSet = [];      // 10 soal terpilih (dengan opsi teracak)
+let answers = [];         // index opsi yang dipilih siswa (atau null)
+let current = 0;
+let attempt = 1;
+let lastResult = null;    // untuk laporan pdf
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function buildQuestionSet(){
+  const pickedRaw = shuffle(BANK).slice(0, TOTAL_SOAL);
+  return pickedRaw.map(item=>{
+    const optIdx = shuffle([0,1,2,3,4]);
+    const options = optIdx.map(i=>item.options[i]);
+    const correctIndex = optIdx.indexOf(item.correct);
+    return {q:item.q, code:item.code||"", options, correctIndex};
+  });
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function startExam(){
+  const nama = document.getElementById('input-nama').value.trim();
+  const nisn = document.getElementById('input-nisn').value.trim();
+  let ok = true;
+
+  const fNama = document.getElementById('field-nama');
+  const fNisn = document.getElementById('field-nisn');
+  fNama.classList.remove('error'); fNisn.classList.remove('error');
+
+  if(nama.length < 3){ fNama.classList.add('error'); ok = false; }
+  if(!/^\d{5,10}$/.test(nisn)){ fNisn.classList.add('error'); ok = false; }
+  if(!ok) return;
+
+  student.nama = nama;
+  student.nisn = nisn;
+  attempt = 1;
+  currentSet = buildQuestionSet();
+  answers = new Array(TOTAL_SOAL).fill(null);
+  current = 0;
+  renderQuizMeta();
+  renderQuestion();
+  showScreen('screen-quiz');
+}
+
+function renderQuizMeta(){
+  document.getElementById('quiz-id-tag').textContent =
+    'TKA-DML-' + String(attempt).padStart(2,'0') + ' · ' + student.nisn;
+
+  const nav = document.getElementById('qnav');
+  nav.innerHTML = '';
+  for(let i=0;i<TOTAL_SOAL;i++){
+    const b = document.createElement('button');
+    b.textContent = i+1;
+    b.onclick = ()=>{ current = i; renderQuestion(); };
+    nav.appendChild(b);
+  }
+  updateQnavStates();
+}
+
+function updateQnavStates(){
+  const nav = document.getElementById('qnav');
+  Array.from(nav.children).forEach((b,i)=>{
+    b.classList.toggle('current', i===current);
+    b.classList.toggle('answered', answers[i]!==null);
+  });
+}
+
+function renderQuestion(){
+  const item = currentSet[current];
+  document.getElementById('qnum-label').textContent = 'SOAL ' + String(current+1).padStart(2,'0');
+  document.getElementById('qtext').textContent = item.q;
+  document.getElementById('progress-text').textContent = 'Soal ' + (current+1) + ' dari ' + TOTAL_SOAL;
+  document.getElementById('progress-fill').style.width = (((current+1)/TOTAL_SOAL)*100) + '%';
+
+  const codeEl = document.getElementById('qcode');
+  if(item.code){
+    codeEl.style.display = 'block';
+    codeEl.textContent = item.code;
+  } else {
+    codeEl.style.display = 'none';
+    codeEl.textContent = '';
+  }
+
+  const optWrap = document.getElementById('options');
+  optWrap.innerHTML = '';
+  const letters = ['A','B','C','D','E'];
+  item.options.forEach((opt,i)=>{
+    const div = document.createElement('div');
+    div.className = 'option' + (answers[current]===i ? ' selected' : '');
+    div.onclick = ()=>{ answers[current]=i; renderQuestion(); updateQnavStates(); };
+    div.innerHTML = '<span class="letter">'+letters[i]+'</span><span class="txt"></span>';
+    div.querySelector('.txt').textContent = opt;
+    optWrap.appendChild(div);
+  });
+
+  document.getElementById('btn-prev').disabled = current===0;
+  document.getElementById('btn-prev').style.visibility = current===0 ? 'hidden' : 'visible';
+  const isLast = current === TOTAL_SOAL-1;
+  document.getElementById('btn-next').style.display = isLast ? 'none' : 'inline-block';
+  document.getElementById('btn-submit').style.display = isLast ? 'inline-block' : 'none';
+
+  updateQnavStates();
+}
+
+function goPrev(){ if(current>0){ current--; renderQuestion(); } }
+function goNext(){ if(current<TOTAL_SOAL-1){ current++; renderQuestion(); } }
+
+function submitExam(){
+  const unanswered = answers.filter(a=>a===null).length;
+  if(unanswered>0){
+    if(!confirm('Masih ada '+unanswered+' soal yang belum dijawab. Yakin ingin mengumpulkan sekarang?')) return;
+  }
+  gradeAndShowResult();
+}
+
+function gradeAndShowResult(){
+  let correctCount = 0;
+  const details = currentSet.map((item,i)=>{
+    const chosen = answers[i];
+    const isCorrect = chosen === item.correctIndex;
+    if(isCorrect) correctCount++;
+    return {
+      no: i+1,
+      question: item.q,
+      code: item.code,
+      chosenText: chosen===null ? '(tidak dijawab)' : item.options[chosen],
+      correctText: item.options[item.correctIndex],
+      isCorrect
+    };
+  });
+  const score = Math.round((correctCount/TOTAL_SOAL)*100);
+  const passed = score >= KKM;
+
+  lastResult = {
+    nama: student.nama,
+    nisn: student.nisn,
+    attempt: attempt,
+    score, correctCount, total: TOTAL_SOAL, passed,
+    details,
+    tanggal: new Date().toLocaleString('id-ID', {dateStyle:'long', timeStyle:'short'})
+  };
+
+  renderResult(lastResult);
+  showScreen('screen-result');
+}
+
+function renderResult(r){
+  document.getElementById('result-score').textContent = r.score;
+  document.getElementById('result-nama').textContent = r.nama;
+  document.getElementById('result-nisn').textContent = 'NISN: ' + r.nisn + '  ·  Percobaan ke-' + r.attempt;
+  const pill = document.getElementById('result-status');
+  pill.textContent = r.passed ? 'TUNTAS' : 'BELUM TUNTAS';
+  pill.className = 'status-pill ' + (r.passed ? 'pass':'fail');
+  document.getElementById('result-summary').textContent =
+    'Benar ' + r.correctCount + ' dari ' + r.total + ' soal · KKM ' + KKM;
+
+  const list = document.getElementById('detail-list');
+  list.innerHTML = '';
+  r.details.forEach(d=>{
+    const div = document.createElement('div');
+    div.className = 'detail-item ' + (d.isCorrect ? 'correct' : 'wrong');
+    div.innerHTML = `
+      <div class="detail-top">
+        <p class="detail-q">${d.no}. ${escapeHtml(d.question)}</p>
+        <span class="mark ${d.isCorrect?'correct':'wrong'}">${d.isCorrect ? 'BENAR' : 'SALAH'}</span>
+      </div>
+      ${d.code ? `<code class="detail-code">${escapeHtml(d.code)}</code>` : ''}
+      <p class="detail-ans ${d.isCorrect?'':'wrongtext'}">Jawaban kamu: <b>${escapeHtml(d.chosenText)}</b></p>
+      ${d.isCorrect ? '' : `<p class="detail-ans righttext">Kunci jawaban: <b>${escapeHtml(d.correctText)}</b></p>`}
+    `;
+    list.appendChild(div);
+  });
+
+  document.getElementById('btn-retry').style.display = r.passed ? 'none' : 'inline-block';
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function retryExam(){
+  attempt++;
+  currentSet = buildQuestionSet();
+  answers = new Array(TOTAL_SOAL).fill(null);
+  current = 0;
+  renderQuizMeta();
+  renderQuestion();
+  showScreen('screen-quiz');
+}
+
+function restartAll(){
+  student = {nama:"", nisn:""};
+  document.getElementById('input-nama').value = '';
+  document.getElementById('input-nisn').value = '';
+  document.getElementById('field-nama').classList.remove('error');
+  document.getElementById('field-nisn').classList.remove('error');
+  showScreen('screen-biodata');
+}
+
+/* ============ LAPORAN PDF (A4) ============ */
+function downloadReport(){
+  if(!lastResult) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'a4' });
+  const pageW = 210, marginX = 18;
+  let y = 20;
+
+  // Header
+  doc.setFillColor(11,37,69);
+  doc.rect(0,0,pageW,32,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(15);
+  doc.text('LAPORAN HASIL ASESMEN TKA', marginX, 15);
+  doc.setFontSize(10);
+  doc.setFont('helvetica','normal');
+  doc.text('Indikator: Penggunaan DML (Data Manipulation Language) dalam MySQL', marginX, 22);
+
+  y = 42;
+  doc.setTextColor(20,20,20);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(11);
+  doc.text('Data Peserta', marginX, y);
+  doc.setDrawColor(216,224,236);
+  doc.line(marginX, y+2, pageW-marginX, y+2);
+  y += 9;
+
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(10.5);
+  const infoLeft = [
+    ['Nama Lengkap', lastResult.nama],
+    ['NISN', lastResult.nisn],
+  ];
+  const infoRight = [
+    ['Percobaan ke-', String(lastResult.attempt)],
+    ['Tanggal', lastResult.tanggal],
+  ];
+  infoLeft.forEach((row,i)=>{
+    doc.setFont('helvetica','bold'); doc.text(row[0]+' :', marginX, y+i*7);
+    doc.setFont('helvetica','normal'); doc.text(row[1], marginX+38, y+i*7);
+  });
+  infoRight.forEach((row,i)=>{
+    doc.setFont('helvetica','bold'); doc.text(row[0]+' :', marginX+95, y+i*7);
+    doc.setFont('helvetica','normal'); doc.text(row[1], marginX+128, y+i*7);
+  });
+  y += 20;
+
+  // Score box
+  doc.setFillColor(234,241,251);
+  doc.roundedRect(marginX, y, pageW-2*marginX, 24, 3, 3, 'F');
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(20);
+  doc.setTextColor(11,37,69);
+  doc.text('Nilai Akhir: ' + lastResult.score, marginX+8, y+15);
+  doc.setFontSize(11);
+  const statusText = lastResult.passed ? 'STATUS: TUNTAS' : 'STATUS: BELUM TUNTAS';
+  doc.setTextColor(lastResult.passed ? 30 : 178, lastResult.passed ? 122 : 58, lastResult.passed ? 76 : 46);
+  doc.text(statusText, pageW-marginX-58, y+10);
+  doc.setTextColor(90,100,120);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(9.5);
+  doc.text('Benar ' + lastResult.correctCount + ' dari ' + lastResult.total + ' soal  ·  KKM ' + KKM, pageW-marginX-58, y+17);
+  y += 34;
+
+  // Detail table header
+  doc.setTextColor(20,20,20);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(11);
+  doc.text('Rincian Jawaban', marginX, y);
+  doc.line(marginX, y+2, pageW-marginX, y+2);
+  y += 9;
+
+  const colNoW = 8, colQW = 108, colStatusW = 22, colAnsW = pageW-2*marginX-colNoW-colQW-colStatusW;
+
+  doc.setFontSize(8.5);
+  lastResult.details.forEach((d)=>{
+    const qFull = d.no + '. ' + d.question + (d.code ? ('  [' + d.code.replace(/\n/g,' ') + ']') : '');
+    const qLines = doc.splitTextToSize(qFull, colQW);
+    const ansLine = d.isCorrect ? ('Jawaban: ' + d.chosenText) : ('Jawaban: ' + d.chosenText + '  |  Kunci: ' + d.correctText);
+    const ansLines = doc.splitTextToSize(ansLine, colAnsW + colStatusW - 4);
+    const blockLines = Math.max(qLines.length, ansLines.length);
+    const blockH = blockLines*4.2 + 4;
+
+    if(y + blockH > 285){
+      doc.addPage();
+      y = 20;
+    }
+
+    doc.setFillColor(d.isCorrect ? 231 : 251, d.isCorrect ? 245 : 234, d.isCorrect ? 236 : 232);
+    doc.rect(marginX, y-3.5, pageW-2*marginX, blockH, 'F');
+
+    doc.setTextColor(20,20,20);
+    doc.setFont('helvetica','normal');
+    doc.text(qLines, marginX+2, y);
+
+    doc.setTextColor(d.isCorrect ? 30:178, d.isCorrect?122:58, d.isCorrect?76:46);
+    doc.setFont('helvetica','bold');
+    doc.text(ansLines, marginX+colNoW+colQW, y);
+
+    doc.setFont('helvetica','bold');
+    doc.text(d.isCorrect ? 'BENAR':'SALAH', pageW-marginX-colStatusW+2, y);
+
+    y += blockH + 1.5;
+  });
+
+  // Footer note on last page
+  y += 6;
+  if(y > 280){ doc.addPage(); y = 20; }
+  doc.setTextColor(120,120,120);
+  doc.setFontSize(8);
+  doc.setFont('helvetica','italic');
+  doc.text('Laporan ini dibuat otomatis oleh aplikasi Asesmen TKA — Penggunaan DML dalam MySQL.', marginX, y);
+
+  const fname = 'Laporan_TKA_DML_' + lastResult.nisn + '_percobaan' + lastResult.attempt + '.pdf';
+  doc.save(fname);
+}
+</script>
+</body>
+</html>
